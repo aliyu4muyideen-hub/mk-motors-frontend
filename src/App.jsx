@@ -18,35 +18,39 @@ const api = {
     fetch(`${API_BASE}/api/admin/login`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }),
     }).then(async (r) => { if (!r.ok) throw new Error((await r.json()).error || "Login failed"); return r.json(); }),
+  createVehicle: (token, vehicle) =>
+    fetch(`${API_BASE}/api/vehicles`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(vehicle),
+    }).then(async (r) => { if (!r.ok) throw new Error((await r.json()).error || "Could not add vehicle"); return r.json(); }),
   updateVehicle: (token, id, fields) =>
     fetch(`${API_BASE}/api/vehicles/${id}`, {
       method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(fields),
-    }).then((r) => r.json()),
+    }).then(async (r) => { if (!r.ok) throw new Error((await r.json()).error || "Update failed"); return r.json(); }),
   addVehicleImageUrl: (token, id, url) =>
     fetch(`${API_BASE}/api/vehicles/${id}/images/url`, {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ url }),
-    }).then((r) => r.json()),
+    }).then(async (r) => { if (!r.ok) throw new Error((await r.json()).error || "Could not add photo"); return r.json(); }),
   uploadVehicleImage: (token, id, file) => {
     const form = new FormData();
     form.append("photo", file);
     return fetch(`${API_BASE}/api/vehicles/${id}/images`, {
       method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form,
-    }).then((r) => r.json());
+    }).then(async (r) => { if (!r.ok) throw new Error((await r.json()).error || "Upload failed"); return r.json(); });
   },
   removeVehicleImage: (token, id, imageIndex, imageId) =>
     fetch(`${API_BASE}/api/vehicles/${id}/images/${imageId}`, {
       method: "DELETE", headers: { Authorization: `Bearer ${token}` },
-    }),
+    }).then((r) => { if (!r.ok && r.status !== 204) throw new Error("Could not remove photo"); return r; }),
   setSettingUrl: (token, key, value) =>
     fetch(`${API_BASE}/api/settings/${key}`, {
       method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ value }),
-    }).then((r) => r.json()),
+    }).then(async (r) => { if (!r.ok) throw new Error((await r.json()).error || "Could not save"); return r.json(); }),
   uploadSettingImage: (token, key, file) => {
     const form = new FormData();
     form.append("photo", file);
     return fetch(`${API_BASE}/api/settings/${key}/image`, {
       method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form,
-    }).then((r) => r.json());
+    }).then(async (r) => { if (!r.ok) throw new Error((await r.json()).error || "Upload failed"); return r.json(); });
   },
   submitLead: (type, payload) =>
     fetch(`${API_BASE}/api/leads/${type}`, {
@@ -56,6 +60,13 @@ const api = {
     fetch(`${API_BASE}/api/subscribers`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }),
     }).then(async (r) => { if (!r.ok) throw new Error((await r.json()).error || "Subscription failed"); return r.json(); }),
+  identifyPhoto: (token, file) => {
+    const form = new FormData();
+    form.append("photo", file);
+    return fetch(`${API_BASE}/api/vision/identify`, {
+      method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form,
+    }).then(async (r) => { if (!r.ok) throw new Error((await r.json()).error || "Could not identify photo"); return r.json(); });
+  },
 };
 
 function resolveUrl(u) {
@@ -1318,6 +1329,29 @@ function LegalPage({ title }) {
 
 const MAX_PHOTOS_PER_VEHICLE = 5;
 
+function ManageThumb({ entry, onRemove }) {
+  const [errored, setErrored] = useState(false);
+  const src = resolveUrl(imgSrc(entry));
+  return (
+    <div className="relative w-16 h-12 rounded border border-gray-200 overflow-hidden group bg-gray-50">
+      {errored ? (
+        <div className="w-full h-full flex items-center justify-center text-center px-1">
+          <span className="text-[9px] leading-tight text-red-500">Failed to load</span>
+        </div>
+      ) : (
+        <img src={src} alt="" onError={() => setErrored(true)} className="w-full h-full object-cover" />
+      )}
+      <button
+        onClick={onRemove}
+        aria-label="Remove photo"
+        className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <X size={10} />
+      </button>
+    </div>
+  );
+}
+
 function ManageRow({ vehicle, currency, onUpdatePrice, onUpdateDetails, onAddImage, onRemoveImage }) {
   const [priceInput, setPriceInput] = useState(String(vehicle.price));
   const [urlInput, setUrlInput] = useState("");
@@ -1331,6 +1365,7 @@ function ManageRow({ vehicle, currency, onUpdatePrice, onUpdateDetails, onAddIma
     mileage: String(vehicle.mileage),
   });
   const setDetail = (k) => (e) => setDetails((d) => ({ ...d, [k]: e.target.value }));
+  const [uploadError, setUploadError] = useState("");
 
   const savePrice = () => {
     const n = Number(priceInput);
@@ -1347,12 +1382,19 @@ function ManageRow({ vehicle, currency, onUpdatePrice, onUpdateDetails, onAddIma
     });
   };
 
-  const handleFileChange = (e) => {
+  const handleAddUrl = async () => {
+    setUploadError("");
+    const result = await onAddImage(vehicle.id, urlInput);
+    if (result?.ok) setUrlInput("");
+    else setUploadError(result?.error || "Could not add that photo.");
+  };
+
+  const handleFileChange = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => onAddImage(vehicle.id, reader.result);
-    reader.readAsDataURL(file);
+    setUploadError("");
+    const result = await onAddImage(vehicle.id, file);
+    if (!result?.ok) setUploadError(result?.error || "Upload failed.");
     e.target.value = "";
   };
 
@@ -1372,43 +1414,37 @@ function ManageRow({ vehicle, currency, onUpdatePrice, onUpdateDetails, onAddIma
               <span className="text-xs text-gray-400 italic">No photos added yet — using illustrated placeholder.</span>
             )}
             {vehicle.images.map((entry, i) => (
-              <div key={i} className="relative w-16 h-12 rounded border border-gray-200 overflow-hidden group">
-                <img src={resolveUrl(imgSrc(entry))} alt="" className="w-full h-full object-cover" />
-                <button
-                  onClick={() => onRemoveImage(vehicle.id, i, imgId(entry))}
-                  aria-label="Remove photo"
-                  className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X size={10} />
-                </button>
-              </div>
+              <ManageThumb key={i} entry={entry} onRemove={() => onRemoveImage(vehicle.id, i, imgId(entry))} />
             ))}
           </div>
 
           {atLimit ? (
             <p className="text-xs text-amber-600">Maximum of {MAX_PHOTOS_PER_VEHICLE} photos reached — remove one to add another.</p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              <input
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="Or paste an image URL"
-                className="flex-1 min-w-[160px] text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                onClick={() => { onAddImage(vehicle.id, urlInput); setUrlInput(""); }}
-                className="text-sm font-medium border border-gray-300 hover:border-gray-400 rounded-lg px-4 py-2 transition-colors whitespace-nowrap"
-              >
-                Add URL
-              </button>
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-              <button
-                onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                className="text-sm font-medium bg-blue-700 hover:bg-blue-800 text-white rounded-lg px-4 py-2 transition-colors whitespace-nowrap"
-              >
-                Upload from device
-              </button>
-            </div>
+            <>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder="Or paste an image URL"
+                  className="flex-1 min-w-[160px] text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleAddUrl}
+                  className="text-sm font-medium border border-gray-300 hover:border-gray-400 rounded-lg px-4 py-2 transition-colors whitespace-nowrap"
+                >
+                  Add URL
+                </button>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                <button
+                  onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                  className="text-sm font-medium bg-blue-700 hover:bg-blue-800 text-white rounded-lg px-4 py-2 transition-colors whitespace-nowrap"
+                >
+                  Upload from device
+                </button>
+              </div>
+              {uploadError && <p className="text-xs text-red-600 mt-1.5">{uploadError}</p>}
+            </>
           )}
         </div>
 
@@ -1474,11 +1510,21 @@ function ManageRow({ vehicle, currency, onUpdatePrice, onUpdateDetails, onAddIma
 function HeroImageManager({ heroImage, onSetUrl, onUploadFile }) {
   const [urlInput, setUrlInput] = useState("");
   const fileInputRef = useRef(null);
+  const [uploadError, setUploadError] = useState("");
 
-  const handleFileChange = (e) => {
+  const handleAddUrl = async () => {
+    setUploadError("");
+    const result = await onSetUrl(urlInput);
+    if (result?.ok) setUrlInput("");
+    else setUploadError(result?.error || "Could not add that photo.");
+  };
+
+  const handleFileChange = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    onUploadFile(file);
+    setUploadError("");
+    const result = await onUploadFile(file);
+    if (!result?.ok) setUploadError(result?.error || "Upload failed.");
     e.target.value = "";
   };
 
@@ -1494,26 +1540,29 @@ function HeroImageManager({ heroImage, onSetUrl, onUploadFile }) {
             <CarArt bodyType="SUV" className="w-4/5 h-4/5" />
           )}
         </div>
-        <div className="flex-1 flex flex-wrap gap-2">
-          <input
-            value={urlInput}
-            onChange={(e) => setUrlInput(e.target.value)}
-            placeholder="Or paste an image URL"
-            className="flex-1 min-w-[160px] text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            onClick={() => { onSetUrl(urlInput); setUrlInput(""); }}
-            className="text-sm font-medium border border-gray-300 hover:border-gray-400 rounded-lg px-4 py-2 transition-colors whitespace-nowrap"
-          >
-            Add URL
-          </button>
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-          <button
-            onClick={() => fileInputRef.current && fileInputRef.current.click()}
-            className="text-sm font-medium bg-blue-700 hover:bg-blue-800 text-white rounded-lg px-4 py-2 transition-colors whitespace-nowrap"
-          >
-            Upload from device
-          </button>
+        <div className="flex-1">
+          <div className="flex flex-wrap gap-2">
+            <input
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="Or paste an image URL"
+              className="flex-1 min-w-[160px] text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={handleAddUrl}
+              className="text-sm font-medium border border-gray-300 hover:border-gray-400 rounded-lg px-4 py-2 transition-colors whitespace-nowrap"
+            >
+              Add URL
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+            <button
+              onClick={() => fileInputRef.current && fileInputRef.current.click()}
+              className="text-sm font-medium bg-blue-700 hover:bg-blue-800 text-white rounded-lg px-4 py-2 transition-colors whitespace-nowrap"
+            >
+              Upload from device
+            </button>
+          </div>
+          {uploadError && <p className="text-xs text-red-600 mt-1.5">{uploadError}</p>}
         </div>
       </div>
     </div>
@@ -1537,7 +1586,176 @@ function AdminLoginGate({ onLogin, error, loading }) {
   );
 }
 
-function ManageInventoryPage({ vehicles, currency, onUpdatePrice, onUpdateDetails, onAddImage, onRemoveImage, heroImage, onSetHeroUrl, onUploadHeroFile, live, loggedIn, onLogin, loginError, loginLoading }) {
+function AddVehicleForm({ onAddVehicle, onIdentifyPhoto }) {
+  const blank = { vin: "", year: "", make: "", model: "", trim: "", bodyType: "Sedan", price: "", mileage: "", engine: "", transmission: "Automatic", fuelType: "Gasoline", exteriorColor: "", interiorColor: "", description: "" };
+  const [form, setForm] = useState(blank);
+  const [vinLoading, setVinLoading] = useState(false);
+  const [vinError, setVinError] = useState("");
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const [photoNote, setPhotoNote] = useState("");
+  const photoInputRef = useRef(null);
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const lookupVin = async () => {
+    const vin = form.vin.trim();
+    if (vin.length !== 17) { setVinError("A VIN is exactly 17 characters."); return; }
+    setVinLoading(true);
+    setVinError("");
+    try {
+      const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${vin}?format=json`);
+      const data = await res.json();
+      const get = (name) => data.Results?.find((r) => r.Variable === name)?.Value || "";
+      const year = get("Model Year");
+      const make = get("Make");
+      const model = get("Model");
+      if (!make || !model) { setVinError("Couldn't find that VIN — you can still fill in the fields yourself."); return; }
+      setForm((f) => ({
+        ...f,
+        year: year || f.year,
+        make, model,
+        trim: get("Trim") || f.trim,
+        bodyType: get("Body Class")?.includes("SUV") ? "SUV" : get("Body Class")?.includes("Truck") ? "Truck" : get("Body Class")?.includes("Hatchback") ? "Hatchback" : get("Body Class")?.includes("Van") ? "Van" : "Sedan",
+        engine: [get("Displacement (L)") && `${get("Displacement (L)")}L`, get("Engine Number of Cylinders") && `${get("Engine Number of Cylinders")}-Cyl`].filter(Boolean).join(" ") || f.engine,
+        fuelType: get("Fuel Type - Primary")?.includes("Electric") ? "Electric" : get("Fuel Type - Primary")?.includes("Hybrid") ? "Hybrid" : get("Fuel Type - Primary")?.includes("Diesel") ? "Diesel" : "Gasoline",
+        transmission: get("Transmission Style")?.includes("Manual") ? "Manual" : "Automatic",
+      }));
+    } catch {
+      setVinError("Couldn't reach the VIN lookup service — you can still fill in the fields yourself.");
+    } finally {
+      setVinLoading(false);
+    }
+  };
+
+  const handlePhotoFile = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setPhotoLoading(true);
+    setPhotoError("");
+    setPhotoNote("");
+    const result = await onIdentifyPhoto(file);
+    setPhotoLoading(false);
+    e.target.value = "";
+    if (!result?.ok) { setPhotoError(result?.error || "Could not identify that photo."); return; }
+    const d = result.data || {};
+    if (!d.make && !d.model) { setPhotoNote("Couldn't confidently identify that car — fill in the fields yourself."); return; }
+    setForm((f) => ({
+      ...f,
+      year: d.year || f.year,
+      make: d.make || f.make,
+      model: d.model || f.model,
+      bodyType: ["Sedan", "SUV", "Truck", "Hatchback", "Van"].includes(d.bodyType) ? d.bodyType : f.bodyType,
+      exteriorColor: d.exteriorColor || f.exteriorColor,
+    }));
+    setPhotoNote("Filled in from the photo — double check before saving, especially the year.");
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaveError("");
+    if (!form.year || !form.make || !form.model || !form.price || !form.mileage) {
+      setSaveError("Year, make, model, price, and mileage are required.");
+      return;
+    }
+    setSaving(true);
+    const result = await onAddVehicle({
+      year: Number(form.year), make: form.make, model: form.model, trim: form.trim, bodyType: form.bodyType,
+      price: Number(form.price), mileage: Number(form.mileage), engine: form.engine, transmission: form.transmission,
+      fuelType: form.fuelType, exteriorColor: form.exteriorColor, interiorColor: form.interiorColor, description: form.description,
+    });
+    setSaving(false);
+    if (result?.ok) { setForm(blank); setOpen(false); }
+    else setSaveError(result?.error || "Could not add this vehicle.");
+  };
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="w-full mb-8 border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-xl py-6 text-sm font-medium text-gray-600 hover:text-blue-700 transition-colors">
+        + Add a new vehicle
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-5 mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-gray-900">Add a new vehicle</h3>
+        <button type="button" onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
+      </div>
+
+      <div className="bg-blue-50 rounded-lg p-3 mb-4">
+        <p className="text-xs font-medium text-gray-700 mb-2">Have the VIN? Paste it here to auto-fill year, make, model, and more.</p>
+        <div className="flex gap-2">
+          <input value={form.vin} onChange={set("vin")} placeholder="17-character VIN"
+            className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <button type="button" onClick={lookupVin} disabled={vinLoading}
+            className="text-sm font-medium bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white rounded-lg px-4 py-2 transition-colors whitespace-nowrap">
+            {vinLoading ? "Looking up…" : "Auto-fill"}
+          </button>
+        </div>
+        {vinError && <p className="text-xs text-amber-600 mt-1.5">{vinError}</p>}
+      </div>
+
+      <div className="bg-purple-50 rounded-lg p-3 mb-4">
+        <p className="text-xs font-medium text-gray-700 mb-2">Or take/upload a photo of the car and let AI guess the year, make, model, and color.</p>
+        <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoFile} className="hidden" />
+        <button type="button" onClick={() => photoInputRef.current && photoInputRef.current.click()} disabled={photoLoading}
+          className="text-sm font-medium bg-purple-700 hover:bg-purple-800 disabled:opacity-60 text-white rounded-lg px-4 py-2 transition-colors">
+          {photoLoading ? "Identifying…" : "Identify from photo"}
+        </button>
+        {photoError && <p className="text-xs text-red-600 mt-1.5">{photoError}</p>}
+        {photoNote && !photoError && <p className="text-xs text-purple-700 mt-1.5">{photoNote}</p>}
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+        <Field label="Year" type="number" required value={form.year} onChange={set("year")} />
+        <Field label="Make" required value={form.make} onChange={set("make")} />
+        <Field label="Model" required value={form.model} onChange={set("model")} />
+        <Field label="Trim" value={form.trim} onChange={set("trim")} />
+        <label className="block text-sm">
+          <span className="block text-gray-600 mb-1">Body type</span>
+          <select value={form.bodyType} onChange={set("bodyType")} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>Sedan</option><option>SUV</option><option>Truck</option><option>Hatchback</option><option>Van</option>
+          </select>
+        </label>
+        <Field label="Price (USD)" type="number" required value={form.price} onChange={set("price")} />
+        <Field label="Mileage" type="number" required value={form.mileage} onChange={set("mileage")} />
+        <Field label="Engine" value={form.engine} onChange={set("engine")} placeholder="e.g. 2.5L 4-Cyl" />
+        <label className="block text-sm">
+          <span className="block text-gray-600 mb-1">Transmission</span>
+          <select value={form.transmission} onChange={set("transmission")} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>Automatic</option><option>Manual</option>
+          </select>
+        </label>
+        <label className="block text-sm">
+          <span className="block text-gray-600 mb-1">Fuel type</span>
+          <select value={form.fuelType} onChange={set("fuelType")} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>Gasoline</option><option>Diesel</option><option>Hybrid</option><option>Electric</option>
+          </select>
+        </label>
+        <Field label="Exterior color" value={form.exteriorColor} onChange={set("exteriorColor")} />
+        <Field label="Interior color" value={form.interiorColor} onChange={set("interiorColor")} />
+      </div>
+      <label className="block text-sm mb-4">
+        <span className="block text-gray-600 mb-1">Description</span>
+        <textarea rows={2} value={form.description} onChange={set("description")}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </label>
+
+      {saveError && <p className="text-sm text-red-600 mb-3">{saveError}</p>}
+      <button type="submit" disabled={saving} className="bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-medium rounded-lg px-5 py-2.5 text-sm transition-colors">
+        {saving ? "Adding…" : "Add vehicle"}
+      </button>
+      <p className="text-xs text-gray-400 mt-3">Add photos for it afterward from the list below, once it's saved.</p>
+    </form>
+  );
+}
+
+function ManageInventoryPage({ vehicles, currency, onUpdatePrice, onUpdateDetails, onAddImage, onRemoveImage, onAddVehicle, onIdentifyPhoto, heroImage, onSetHeroUrl, onUploadHeroFile, live, loggedIn, onLogin, loginError, loginLoading }) {
   if (live && !loggedIn) {
     return <AdminLoginGate onLogin={onLogin} error={loginError} loading={loginLoading} />;
   }
@@ -1557,6 +1775,8 @@ function ManageInventoryPage({ vehicles, currency, onUpdatePrice, onUpdateDetail
       )}
 
       <HeroImageManager heroImage={heroImage} onSetUrl={onSetHeroUrl} onUploadFile={onUploadHeroFile} />
+
+      <AddVehicleForm onAddVehicle={onAddVehicle} onIdentifyPhoto={onIdentifyPhoto} />
 
       <div className="space-y-4">
         {vehicles.map((v) => (
@@ -1657,7 +1877,7 @@ export default function App() {
 
   const addImage = async (id, urlOrFile) => {
     const isFile = urlOrFile instanceof File;
-    if (!isFile && (!urlOrFile || !urlOrFile.trim())) return;
+    if (!isFile && (!urlOrFile || !urlOrFile.trim())) return { ok: false, error: "Nothing to add." };
 
     if (api.live() && adminToken) {
       try {
@@ -1665,11 +1885,18 @@ export default function App() {
           ? await api.uploadVehicleImage(adminToken, id, urlOrFile)
           : await api.addVehicleImageUrl(adminToken, id, urlOrFile.trim());
         setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, images: [...v.images, { url: result.url }] } : v)));
-      } catch { }
-      return;
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err.message || "Upload failed." };
+      }
     }
-    const value = isFile ? await fileToDataUrl(urlOrFile) : urlOrFile.trim();
-    setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, images: [...v.images, value] } : v)));
+    try {
+      const value = isFile ? await fileToDataUrl(urlOrFile) : urlOrFile.trim();
+      setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, images: [...v.images, value] } : v)));
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: "Could not read that file." };
+    }
   };
 
   const removeImage = async (id, index, imageId) => {
@@ -1681,22 +1908,53 @@ export default function App() {
   };
 
   const setHeroUrl = async (url) => {
-    if (!url || !url.trim()) return;
+    if (!url || !url.trim()) return { ok: false, error: "Nothing to add." };
     if (api.live() && adminToken) {
-      try { const r = await api.setSettingUrl(adminToken, "heroImage", url.trim()); setHeroImage(r.value); }
-      catch { }
-      return;
+      try { const r = await api.setSettingUrl(adminToken, "heroImage", url.trim()); setHeroImage(r.value); return { ok: true }; }
+      catch (err) { return { ok: false, error: err.message || "Could not save." }; }
     }
     setHeroImage(url.trim());
+    return { ok: true };
   };
 
   const uploadHeroFile = async (file) => {
     if (api.live() && adminToken) {
-      try { const r = await api.uploadSettingImage(adminToken, "heroImage", file); setHeroImage(r.value); }
-      catch { }
-      return;
+      try { const r = await api.uploadSettingImage(adminToken, "heroImage", file); setHeroImage(r.value); return { ok: true }; }
+      catch (err) { return { ok: false, error: err.message || "Upload failed." }; }
     }
-    setHeroImage(await fileToDataUrl(file));
+    try {
+      setHeroImage(await fileToDataUrl(file));
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "Could not read that file." };
+    }
+  };
+
+  const addVehicle = async (vehicleData) => {
+    if (api.live() && adminToken) {
+      try {
+        const created = await api.createVehicle(adminToken, vehicleData);
+        setVehicles((prev) => [...prev, created]);
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err.message || "Could not add vehicle." };
+      }
+    }
+    const id = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setVehicles((prev) => [...prev, { ...vehicleData, id, images: [] }]);
+    return { ok: true };
+  };
+
+  const identifyPhoto = async (file) => {
+    if (!api.live() || !adminToken) {
+      return { ok: false, error: "Photo identification needs a live, logged-in backend connection." };
+    }
+    try {
+      const data = await api.identifyPhoto(adminToken, file);
+      return { ok: true, data };
+    } catch (err) {
+      return { ok: false, error: err.message || "Could not identify that photo." };
+    }
   };
 
   const selectedVehicle = vehicles.find((v) => v.id === selectedId);
@@ -1746,6 +2004,8 @@ export default function App() {
             onUpdatePrice={updatePrice}
             onUpdateDetails={updateDetails}
             onAddImage={addImage}
+            onAddVehicle={addVehicle}
+            onIdentifyPhoto={identifyPhoto}
             onRemoveImage={removeImage}
             heroImage={heroImage}
             onSetHeroUrl={setHeroUrl}
@@ -1767,4 +2027,4 @@ export default function App() {
       <TestDriveModal open={testDriveOpen} onClose={() => setTestDriveOpen(false)} vehicle={testDriveVehicle} />
     </div>
   );
-                                }
+                               }
