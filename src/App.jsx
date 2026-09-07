@@ -985,7 +985,7 @@ function VehicleDetailsPage({ vehicle, currency, onTestDrive, setView, onBack })
             <button onClick={() => onTestDrive(vehicle)} className="bg-blue-700 hover:bg-blue-800 text-white font-medium px-5 py-2.5 rounded-lg transition-colors">
               Schedule Test Drive
             </button>
-            <a href="mailto:hello@mkmotors.example" className="border border-gray-300 hover:border-gray-400 text-gray-800 font-medium px-5 py-2.5 rounded-lg transition-colors">
+            <a href="mailto:12mkmotors@gmail.com.example" className="border border-gray-300 hover:border-gray-400 text-gray-800 font-medium px-5 py-2.5 rounded-lg transition-colors">
               Ask About This Car
             </a>
           </div>
@@ -1129,15 +1129,16 @@ function ContactPage() {
           <ul className="space-y-3 text-sm text-gray-600 mb-8">
             <li className="flex items-center gap-2">
               <Phone size={15} className="text-blue-700" />
-              <a href="tel:+15550000000" className="hover:text-blue-700 transition-colors">+1 (555) 000-0000</a>
+              <a href="tel:+23409033504968" className="hover:text-blue-700 transition-colors">090 3350 4968</a>
             </li>
             <li className="flex items-center gap-2">
               <Mail size={15} className="text-blue-700" />
-              <a href="mailto:hello@mkmotors.example" className="hover:text-blue-700 transition-colors">hello@mkmotors.example</a>
+              <a href="mailto:12mkmotors@gmail.com.example" className="hover:text-blue-700 transition-colors">12mkmotors@gmail.com.example</a>
             </li>
             <li className="flex items-center gap-2">
               <MapPin size={15} className="text-blue-700" />
-              <a href="https://maps.google.com/?q=123+Main+Street" target="_blank" rel="noopener noreferrer" className="hover:text-blue-700 transition-colors">123 Main Street</a>
+              <a href="https://maps.google.com/?q=Shop+9/10+Sokoto+Rd+Zaria" target="_blank" rel="noopener noreferrer" className="hover:text-blue-700 transition-colors">Shop 9/10 Sokoto Rd, inside First Prestige Station, Kano Road, Zaria
+            </a>
             </li>
           </ul>
           <h3 className="font-medium text-gray-900 mb-2 flex items-center gap-2"><Clock size={15} /> Business hours</h3>
@@ -2022,7 +2023,7 @@ export default function App() {
       </main>
 
       <Footer setView={setView} />
-      <MobileBar setView={setView} onCall={() => window.location.assign("tel:+15550000000")} />
+      <MobileBar setView={setView} onCall={() => window.location.assign("tel:+23409033504968")} />
       <ChatWidget />
       <TestDriveModal open={testDriveOpen} onClose={() => setTestDriveOpen(false)} vehicle={testDriveVehicle} />
     </div>
