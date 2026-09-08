@@ -67,6 +67,13 @@ const api = {
       method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form,
     }).then(async (r) => { if (!r.ok) throw new Error((await r.json()).error || "Could not identify photo"); return r.json(); });
   },
+  getLeads: (token) =>
+    fetch(`${API_BASE}/api/leads`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(async (r) => { if (!r.ok) throw new Error((await r.json()).error || "Could not load messages"); return r.json(); }),
+  replyToLead: (token, id, message) =>
+    fetch(`${API_BASE}/api/leads/${id}/reply`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ message }),
+    }).then(async (r) => { if (!r.ok) throw new Error((await r.json()).error || "Could not send reply"); return r.json(); }),
 };
 
 function resolveUrl(u) {
@@ -344,188 +351,7 @@ function Field({ label, type = "text", ...props }) {
         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
     </label>
   );
-}
-
-function Header({ view, setView, currency, setCurrency, mobileOpen, setMobileOpen, scrolled }) {
-  const links = [
-    { id: "home", label: "Home" },
-    { id: "inventory", label: "Inventory" },
-    { id: "services", label: "Services" },
-    { id: "about", label: "About Us" },
-    { id: "contact", label: "Contact" },
-  ];
-  return (
-    <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/90 backdrop-blur-md shadow-sm" : "bg-white"} border-b border-gray-100`}>
-      <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
-        <button onClick={() => setView("home")} className="flex items-center gap-2 font-bold text-lg text-slate-900">
-          <span className="w-8 h-8 rounded-lg bg-blue-700 text-white flex items-center justify-center text-sm">MK</span>
-          MK MOTORS
-        </button>
-
-        <nav className="hidden md:flex items-center gap-7">
-          {links.map((l) => (
-            <button
-              key={l.id}
-              onClick={() => setView(l.id)}
-              className={`text-sm font-medium transition-colors relative pb-1 ${view === l.id ? "text-blue-700" : "text-gray-600 hover:text-gray-900"}`}
-            >
-              {l.label}
-              {view === l.id && <span className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-blue-700 rounded-full" />}
-            </button>
-          ))}
-        </nav>
-
-        <div className="hidden md:flex items-center gap-3">
-          <button
-            onClick={() => setView("manage")}
-            className="text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors"
-            title="Edit prices and photos"
-          >
-            Manage Inventory
-          </button>
-          <button
-            onClick={() => setCurrency(currency === "USD" ? "NGN" : "USD")}
-            className="text-xs font-medium border border-gray-200 rounded-full px-3 py-1.5 text-gray-600 hover:border-gray-300 transition-colors"
-          >
-            {currency === "USD" ? "$ USD" : "₦ NGN"}
-          </button>
-          <button onClick={() => setView("inventory")} className="bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-            Find a Car
-          </button>
-        </div>
-
-        <button className="md:hidden text-gray-700" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Menu">
-          {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-
-      <div className={`md:hidden overflow-hidden transition-all duration-300 ${mobileOpen ? "max-h-96" : "max-h-0"}`}>
-        <div className="px-5 pb-4 flex flex-col gap-1 border-t border-gray-100 pt-3">
-          {links.map((l) => (
-            <button key={l.id} onClick={() => { setView(l.id); setMobileOpen(false); }}
-              className={`text-left py-2.5 text-sm font-medium ${view === l.id ? "text-blue-700" : "text-gray-700"}`}>
-              {l.label}
-            </button>
-          ))}
-          <button onClick={() => { setView("manage"); setMobileOpen(false); }}
-            className="text-left py-2.5 text-sm font-medium text-gray-500">
-            Manage Inventory
-          </button>
-          <button onClick={() => { setView("inventory"); setMobileOpen(false); }} className="mt-2 bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg">
-            Find a Car
-          </button>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function Hero({ setView, heroImage }) {
-  return (
-    <section className="pt-32 pb-16 bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-6xl mx-auto px-5 grid md:grid-cols-2 gap-10 items-center">
-        <div className="animate-[fadeUp_0.6s_ease]">
-          <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 leading-tight mb-4">Find your next car.</h1>
-          <p className="text-gray-600 text-lg mb-6 max-w-md">Quality vehicles, transparent prices, and a dealership you can trust.</p>
-          <div className="flex flex-wrap gap-3 mb-6">
-            <button onClick={() => setView("inventory")} className="bg-blue-700 hover:bg-blue-800 text-white font-medium px-6 py-3 rounded-lg transition-colors">
-              Browse Inventory
-            </button>
-            <button onClick={() => setView("contact")} className="border border-gray-300 hover:border-gray-400 text-gray-800 font-medium px-6 py-3 rounded-lg transition-colors">
-              Contact Us
-            </button>
-          </div>
-          <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600">
-            <li className="flex items-center gap-1.5"><Check size={15} className="text-blue-700" /> Quality Checked</li>
-            <li className="flex items-center gap-1.5"><Check size={15} className="text-blue-700" /> Transparent Pricing</li>
-            <li className="flex items-center gap-1.5"><Check size={15} className="text-blue-700" /> Flexible Financing</li>
-          </ul>
-        </div>
-        <div className="animate-[fadeUp_0.7s_ease] rounded-2xl border border-gray-200 shadow-sm overflow-hidden aspect-square sm:aspect-video">
-          {heroImage ? (
-            <img src={resolveUrl(heroImage)} alt="Featured vehicle" className="w-full h-full object-cover object-center" />
-          ) : (
-            <div className="w-full h-full bg-white flex items-center justify-center p-10">
-              <CarArt bodyType="SUV" className="w-full h-full" />
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function SearchPanel({ setView, quickSearch, setQuickSearch }) {
-  return (
-    <section className="max-w-5xl mx-auto px-5 -mt-8 relative z-10">
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-md p-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Find the right car for you</h2>
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-          <select className="col-span-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={quickSearch.make} onChange={(e) => setQuickSearch((q) => ({ ...q, make: e.target.value }))}>
-            <option value="">Make</option>
-            {[...new Set(VEHICLES.map((v) => v.make))].map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
-          <select className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={quickSearch.bodyType} onChange={(e) => setQuickSearch((q) => ({ ...q, bodyType: e.target.value }))}>
-            <option value="">Body Type</option>
-            {[...new Set(VEHICLES.map((v) => v.bodyType))].map((b) => <option key={b} value={b}>{b}</option>)}
-          </select>
-          <select className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={quickSearch.year} onChange={(e) => setQuickSearch((q) => ({ ...q, year: e.target.value }))}>
-            <option value="">Year</option>
-            {[...new Set(VEHICLES.map((v) => v.year))].sort((a, b) => b - a).map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <select className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={quickSearch.maxPrice} onChange={(e) => setQuickSearch((q) => ({ ...q, maxPrice: e.target.value }))}>
-            <option value="">Max price</option>
-            <option value="20000">Under $20,000</option>
-            <option value="25000">Under $25,000</option>
-            <option value="30000">Under $30,000</option>
-          </select>
-          <select className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={quickSearch.transmission} onChange={(e) => setQuickSearch((q) => ({ ...q, transmission: e.target.value }))}>
-            <option value="">Transmission</option>
-            <option value="Automatic">Automatic</option>
-            <option value="Manual">Manual</option>
-          </select>
-          <button onClick={() => setView("inventory")} className="bg-blue-700 hover:bg-blue-800 text-white font-medium rounded-lg py-2.5 text-sm transition-colors flex items-center justify-center gap-1.5">
-            <Search size={15} /> Search Cars
-          </button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function TrustSection() {
-  const items = [
-    { icon: ShieldCheck, title: "Quality Checked", text: "Every vehicle is inspected before being listed." },
-    { icon: Check, title: "Transparent Pricing", text: "No confusing pricing or unnecessary surprises." },
-    { icon: Car, title: "Flexible Financing", text: "Simple financing options for different budgets." },
-    { icon: Users, title: "Customer First", text: "We're here to help you find the right vehicle." },
-  ];
-  return (
-    <section className="py-20 bg-gray-50">
-      <div className="max-w-6xl mx-auto px-5">
-        <Reveal><h2 className="text-2xl sm:text-3xl font-bold text-slate-900 text-center mb-12">Why choose MK Motors?</h2></Reveal>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {items.map((it, i) => (
-            <Reveal key={it.title} className={`delay-${i}`}>
-              <div className="bg-white rounded-xl border border-gray-200 p-6 h-full">
-                <div className="w-11 h-11 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center mb-4">
-                  <it.icon size={20} />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-1.5">{it.title}</h3>
-                <p className="text-sm text-gray-500">{it.text}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+      }
 
 function FeaturedInventory({ vehicles, favorites, toggleFav, onView, currency, setView }) {
   return (
@@ -552,13 +378,14 @@ function FeaturedInventory({ vehicles, favorites, toggleFav, onView, currency, s
 
 function NewArrivalsSignup() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState("idle");
+  const [status, setStatus] = useState("idle"); // idle | loading | done | error
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim()) return;
     setStatus("loading");
     if (!api.live()) {
+      // demo mode: nothing to save to, but still confirm the interaction works
       setTimeout(() => setStatus("done"), 400);
       return;
     }
@@ -985,7 +812,7 @@ function VehicleDetailsPage({ vehicle, currency, onTestDrive, setView, onBack })
             <button onClick={() => onTestDrive(vehicle)} className="bg-blue-700 hover:bg-blue-800 text-white font-medium px-5 py-2.5 rounded-lg transition-colors">
               Schedule Test Drive
             </button>
-            <a href="mailto:12mkmotors@gmail.com.example" className="border border-gray-300 hover:border-gray-400 text-gray-800 font-medium px-5 py-2.5 rounded-lg transition-colors">
+            <a href="mailto:Aliyu4muyideen@gmail.com" className="border border-gray-300 hover:border-gray-400 text-gray-800 font-medium px-5 py-2.5 rounded-lg transition-colors">
               Ask About This Car
             </a>
           </div>
@@ -1036,7 +863,7 @@ function TradeInForm() {
       onSubmit={async (e) => {
         e.preventDefault();
         if (api.live()) {
-          try { await api.submitLead("trade-in", form); } catch { }
+          try { await api.submitLead("trade-in", form); } catch { /* still confirm to the customer */ }
         }
         setSubmitted(true);
       }}
@@ -1097,8 +924,8 @@ function ServicesPage({ setView, currency }) {
       </div>
     </div>
   );
-}
-
+  }
+/* ---------- about page ---------- */
 function AboutPage() {
   return (
     <div className="pt-28 pb-20 max-w-4xl mx-auto px-5">
@@ -1116,6 +943,7 @@ function AboutPage() {
   );
 }
 
+/* ---------- contact page ---------- */
 function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
@@ -1129,16 +957,15 @@ function ContactPage() {
           <ul className="space-y-3 text-sm text-gray-600 mb-8">
             <li className="flex items-center gap-2">
               <Phone size={15} className="text-blue-700" />
-              <a href="tel:+23409033504968" className="hover:text-blue-700 transition-colors">090 3350 4968</a>
+              <a href="tel:+2349033504968" className="hover:text-blue-700 transition-colors">090 3350 4968</a>
             </li>
             <li className="flex items-center gap-2">
               <Mail size={15} className="text-blue-700" />
-              <a href="mailto:12mkmotors@gmail.com.example" className="hover:text-blue-700 transition-colors">12mkmotors@gmail.com.example</a>
+              <a href="mailto:Aliyu4muyideen@gmail.com" className="hover:text-blue-700 transition-colors">Aliyu4muyideen@gmail.com</a>
             </li>
             <li className="flex items-center gap-2">
               <MapPin size={15} className="text-blue-700" />
-              <a href="https://maps.google.com/?q=Shop+9/10+Sokoto+Rd+Zaria" target="_blank" rel="noopener noreferrer" className="hover:text-blue-700 transition-colors">Shop 9/10 Sokoto Rd, inside First Prestige Station, Kano Road, Zaria
-            </a>
+              <a href="https://maps.google.com/?q=Shop+9/10+Sokoto+Rd+Zaria" target="_blank" rel="noopener noreferrer" className="hover:text-blue-700 transition-colors">Shop 9/10 Sokoto Rd, inside First Prestige Station, Kano Road, Zaria</a>
             </li>
           </ul>
           <h3 className="font-medium text-gray-900 mb-2 flex items-center gap-2"><Clock size={15} /> Business hours</h3>
@@ -1162,7 +989,7 @@ function ContactPage() {
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (api.live()) {
-                  try { await api.submitLead("contact", form); } catch { }
+                  try { await api.submitLead("contact", form); } catch { /* still confirm to the customer */ }
                 }
                 setSubmitted(true);
               }}
@@ -1187,6 +1014,7 @@ function ContactPage() {
   );
 }
 
+/* ---------- footer ---------- */
 function Footer({ setView }) {
   return (
     <footer className="bg-slate-900 text-white pt-16 pb-8">
@@ -1225,10 +1053,11 @@ function FooterCol({ title, links, setView }) {
   );
 }
 
+/* ---------- chat with admin (floating widget) ---------- */
 function ChatWidget() {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", message: "" });
-  const [status, setStatus] = useState("idle");
+  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [status, setStatus] = useState("idle"); // idle | loading | done | error
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const handleSubmit = async (e) => {
@@ -1246,7 +1075,7 @@ function ChatWidget() {
     }
   };
 
-  const reset = () => { setForm({ name: "", message: "" }); setStatus("idle"); };
+  const reset = () => { setForm({ name: "", email: "", message: "" }); setStatus("idle"); };
 
   return (
     <>
@@ -1274,7 +1103,7 @@ function ChatWidget() {
                 <Check size={20} className="text-blue-700 mx-auto mb-2" />
                 <p className="text-sm font-medium text-gray-900">Message sent</p>
                 <p className="text-xs text-gray-500 mt-1 mb-4">
-                  {api.live() ? "An admin will get back to you shortly." : "Demo mode — this wasn't actually saved."}
+                  {api.live() ? "An admin will reply to your email shortly." : "Demo mode — this wasn't actually saved."}
                 </p>
                 <button onClick={reset} className="text-xs font-medium text-blue-700 hover:text-blue-800">Send another message</button>
               </div>
@@ -1282,6 +1111,10 @@ function ChatWidget() {
               <form onSubmit={handleSubmit} className="space-y-2.5">
                 <input
                   required value={form.name} onChange={set("name")} placeholder="Your name"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  required type="email" value={form.email} onChange={set("email")} placeholder="Your email (so we can reply)"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <textarea
@@ -1314,6 +1147,7 @@ function MobileBar({ setView, onCall }) {
   );
 }
 
+/* ---------- legal placeholder pages ---------- */
 function LegalPage({ title }) {
   return (
     <div className="pt-28 pb-20 max-w-3xl mx-auto px-5">
@@ -1328,6 +1162,7 @@ function LegalPage({ title }) {
   );
 }
 
+/* ---------- manage inventory (edit price + photos, no code editing needed) ---------- */
 const MAX_PHOTOS_PER_VEHICLE = 5;
 
 function ManageThumb({ entry, onRemove }) {
@@ -1587,6 +1422,7 @@ function AdminLoginGate({ onLogin, error, loading }) {
   );
 }
 
+/* ---------- add new vehicle (with optional VIN auto-fill) ---------- */
 function AddVehicleForm({ onAddVehicle, onIdentifyPhoto }) {
   const blank = { vin: "", year: "", make: "", model: "", trim: "", bodyType: "Sedan", price: "", mileage: "", engine: "", transmission: "Automatic", fuelType: "Gasoline", exteriorColor: "", interiorColor: "", description: "" };
   const [form, setForm] = useState(blank);
@@ -1654,378 +1490,3 @@ function AddVehicleForm({ onAddVehicle, onIdentifyPhoto }) {
     }));
     setPhotoNote("Filled in from the photo — double check before saving, especially the year.");
   };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaveError("");
-    if (!form.year || !form.make || !form.model || !form.price || !form.mileage) {
-      setSaveError("Year, make, model, price, and mileage are required.");
-      return;
-    }
-    setSaving(true);
-    const result = await onAddVehicle({
-      year: Number(form.year), make: form.make, model: form.model, trim: form.trim, bodyType: form.bodyType,
-      price: Number(form.price), mileage: Number(form.mileage), engine: form.engine, transmission: form.transmission,
-      fuelType: form.fuelType, exteriorColor: form.exteriorColor, interiorColor: form.interiorColor, description: form.description,
-    });
-    setSaving(false);
-    if (result?.ok) { setForm(blank); setOpen(false); }
-    else setSaveError(result?.error || "Could not add this vehicle.");
-  };
-
-  if (!open) {
-    return (
-      <button onClick={() => setOpen(true)} className="w-full mb-8 border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-xl py-6 text-sm font-medium text-gray-600 hover:text-blue-700 transition-colors">
-        + Add a new vehicle
-      </button>
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-5 mb-8">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-gray-900">Add a new vehicle</h3>
-        <button type="button" onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
-      </div>
-
-      <div className="bg-blue-50 rounded-lg p-3 mb-4">
-        <p className="text-xs font-medium text-gray-700 mb-2">Have the VIN? Paste it here to auto-fill year, make, model, and more.</p>
-        <div className="flex gap-2">
-          <input value={form.vin} onChange={set("vin")} placeholder="17-character VIN"
-            className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          <button type="button" onClick={lookupVin} disabled={vinLoading}
-            className="text-sm font-medium bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white rounded-lg px-4 py-2 transition-colors whitespace-nowrap">
-            {vinLoading ? "Looking up…" : "Auto-fill"}
-          </button>
-        </div>
-        {vinError && <p className="text-xs text-amber-600 mt-1.5">{vinError}</p>}
-      </div>
-
-      <div className="bg-purple-50 rounded-lg p-3 mb-4">
-        <p className="text-xs font-medium text-gray-700 mb-2">Or take/upload a photo of the car and let AI guess the year, make, model, and color.</p>
-        <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoFile} className="hidden" />
-        <button type="button" onClick={() => photoInputRef.current && photoInputRef.current.click()} disabled={photoLoading}
-          className="text-sm font-medium bg-purple-700 hover:bg-purple-800 disabled:opacity-60 text-white rounded-lg px-4 py-2 transition-colors">
-          {photoLoading ? "Identifying…" : "Identify from photo"}
-        </button>
-        {photoError && <p className="text-xs text-red-600 mt-1.5">{photoError}</p>}
-        {photoNote && !photoError && <p className="text-xs text-purple-700 mt-1.5">{photoNote}</p>}
-      </div>
-
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
-        <Field label="Year" type="number" required value={form.year} onChange={set("year")} />
-        <Field label="Make" required value={form.make} onChange={set("make")} />
-        <Field label="Model" required value={form.model} onChange={set("model")} />
-        <Field label="Trim" value={form.trim} onChange={set("trim")} />
-        <label className="block text-sm">
-          <span className="block text-gray-600 mb-1">Body type</span>
-          <select value={form.bodyType} onChange={set("bodyType")} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option>Sedan</option><option>SUV</option><option>Truck</option><option>Hatchback</option><option>Van</option>
-          </select>
-        </label>
-        <Field label="Price (USD)" type="number" required value={form.price} onChange={set("price")} />
-        <Field label="Mileage" type="number" required value={form.mileage} onChange={set("mileage")} />
-        <Field label="Engine" value={form.engine} onChange={set("engine")} placeholder="e.g. 2.5L 4-Cyl" />
-        <label className="block text-sm">
-          <span className="block text-gray-600 mb-1">Transmission</span>
-          <select value={form.transmission} onChange={set("transmission")} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option>Automatic</option><option>Manual</option>
-          </select>
-        </label>
-        <label className="block text-sm">
-          <span className="block text-gray-600 mb-1">Fuel type</span>
-          <select value={form.fuelType} onChange={set("fuelType")} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option>Gasoline</option><option>Diesel</option><option>Hybrid</option><option>Electric</option>
-          </select>
-        </label>
-        <Field label="Exterior color" value={form.exteriorColor} onChange={set("exteriorColor")} />
-        <Field label="Interior color" value={form.interiorColor} onChange={set("interiorColor")} />
-      </div>
-      <label className="block text-sm mb-4">
-        <span className="block text-gray-600 mb-1">Description</span>
-        <textarea rows={2} value={form.description} onChange={set("description")}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      </label>
-
-      {saveError && <p className="text-sm text-red-600 mb-3">{saveError}</p>}
-      <button type="submit" disabled={saving} className="bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-medium rounded-lg px-5 py-2.5 text-sm transition-colors">
-        {saving ? "Adding…" : "Add vehicle"}
-      </button>
-      <p className="text-xs text-gray-400 mt-3">Add photos for it afterward from the list below, once it's saved.</p>
-    </form>
-  );
-}
-
-function ManageInventoryPage({ vehicles, currency, onUpdatePrice, onUpdateDetails, onAddImage, onRemoveImage, onAddVehicle, onIdentifyPhoto, heroImage, onSetHeroUrl, onUploadHeroFile, live, loggedIn, onLogin, loginError, loginLoading }) {
-  if (live && !loggedIn) {
-    return <AdminLoginGate onLogin={onLogin} error={loginError} loading={loginLoading} />;
-  }
-
-  return (
-    <div className="pt-28 pb-20 max-w-4xl mx-auto px-5">
-      <h1 className="text-3xl font-bold text-slate-900 mb-2">Manage inventory</h1>
-      <p className="text-gray-500 mb-2">Update the hero photo, car prices, and car photos — changes appear across the site instantly.</p>
-      {live ? (
-        <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 inline-block mb-8">
-          Connected to your live backend — every change here is saved permanently.
-        </p>
-      ) : (
-        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 inline-block mb-8">
-          Running in demo mode (no backend connected) — edits reset if the page reloads. Set API_BASE near the top of the file to your deployed backend URL to make this permanent.
-        </p>
-      )}
-
-      <HeroImageManager heroImage={heroImage} onSetUrl={onSetHeroUrl} onUploadFile={onUploadHeroFile} />
-
-      <AddVehicleForm onAddVehicle={onAddVehicle} onIdentifyPhoto={onIdentifyPhoto} />
-
-      <div className="space-y-4">
-        {vehicles.map((v) => (
-          <ManageRow key={v.id} vehicle={v} currency={currency} onUpdatePrice={onUpdatePrice} onUpdateDetails={onUpdateDetails} onAddImage={onAddImage} onRemoveImage={onRemoveImage} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export default function App() {
-  const [view, setViewRaw] = useState("home");
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [currency, setCurrency] = useState("USD");
-  const [favorites, setFavorites] = useState(new Set());
-  const [selectedId, setSelectedId] = useState(null);
-  const [previousView, setPreviousView] = useState("home");
-  const [testDriveVehicle, setTestDriveVehicle] = useState(null);
-  const [testDriveOpen, setTestDriveOpen] = useState(false);
-  const [quickSearch, setQuickSearch] = useState({ make: "", bodyType: "", year: "", maxPrice: "", transmission: "" });
-  const [inventoryFilter, setInventoryFilter] = useState({ make: "", bodyType: "", transmission: "", maxPrice: "", minYear: "" });
-  const [vehicles, setVehicles] = useState(VEHICLES);
-  const [heroImage, setHeroImage] = useState("");
-  const [adminToken, setAdminToken] = useState(null);
-  const [loginError, setLoginError] = useState("");
-  const [loginLoading, setLoginLoading] = useState(false);
-
-  const setView = (v) => { setViewRaw(v); window.scrollTo({ top: 0, behavior: "auto" }); };
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    if (!api.live()) return;
-    api.vehicles().then(setVehicles).catch(() => {});
-    api.settings().then((s) => setHeroImage(s.heroImage || "")).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (view === "inventory") {
-      setInventoryFilter((f) => ({
-        ...f,
-        make: quickSearch.make || f.make,
-        bodyType: quickSearch.bodyType || f.bodyType,
-        maxPrice: quickSearch.maxPrice || f.maxPrice,
-        transmission: quickSearch.transmission || f.transmission,
-      }));
-    }
-  }, [view]);
-
-  const toggleFav = (id) => {
-    setFavorites((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
-  const openDetails = (id) => {
-    setPreviousView(view === "details" ? previousView : view);
-    setSelectedId(id);
-    setView("details");
-  };
-  const openTestDrive = (vehicle) => { setTestDriveVehicle(vehicle || null); setTestDriveOpen(true); };
-
-  const handleLogin = async (password) => {
-    setLoginLoading(true);
-    setLoginError("");
-    try {
-      const { token } = await api.login(password);
-      setAdminToken(token);
-    } catch (err) {
-      setLoginError(err.message || "Login failed.");
-    } finally {
-      setLoginLoading(false);
-    }
-  };
-
-  const updatePrice = async (id, price) => {
-    setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, price } : v)));
-    if (api.live() && adminToken) {
-      try { await api.updateVehicle(adminToken, id, { price }); }
-      catch { }
-    }
-  };
-
-  const updateDetails = async (id, fields) => {
-    setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, ...fields } : v)));
-    if (api.live() && adminToken) {
-      try { await api.updateVehicle(adminToken, id, fields); }
-      catch { }
-    }
-  };
-
-  const addImage = async (id, urlOrFile) => {
-    const isFile = urlOrFile instanceof File;
-    if (!isFile && (!urlOrFile || !urlOrFile.trim())) return { ok: false, error: "Nothing to add." };
-
-    if (api.live() && adminToken) {
-      try {
-        const result = isFile
-          ? await api.uploadVehicleImage(adminToken, id, urlOrFile)
-          : await api.addVehicleImageUrl(adminToken, id, urlOrFile.trim());
-        setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, images: [...v.images, { url: result.url }] } : v)));
-        return { ok: true };
-      } catch (err) {
-        return { ok: false, error: err.message || "Upload failed." };
-      }
-    }
-    try {
-      const value = isFile ? await fileToDataUrl(urlOrFile) : urlOrFile.trim();
-      setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, images: [...v.images, value] } : v)));
-      return { ok: true };
-    } catch (err) {
-      return { ok: false, error: "Could not read that file." };
-    }
-  };
-
-  const removeImage = async (id, index, imageId) => {
-    setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, images: v.images.filter((_, i) => i !== index) } : v)));
-    if (api.live() && adminToken && imageId) {
-      try { await api.removeVehicleImage(adminToken, id, index, imageId); }
-      catch { }
-    }
-  };
-
-  const setHeroUrl = async (url) => {
-    if (!url || !url.trim()) return { ok: false, error: "Nothing to add." };
-    if (api.live() && adminToken) {
-      try { const r = await api.setSettingUrl(adminToken, "heroImage", url.trim()); setHeroImage(r.value); return { ok: true }; }
-      catch (err) { return { ok: false, error: err.message || "Could not save." }; }
-    }
-    setHeroImage(url.trim());
-    return { ok: true };
-  };
-
-  const uploadHeroFile = async (file) => {
-    if (api.live() && adminToken) {
-      try { const r = await api.uploadSettingImage(adminToken, "heroImage", file); setHeroImage(r.value); return { ok: true }; }
-      catch (err) { return { ok: false, error: err.message || "Upload failed." }; }
-    }
-    try {
-      setHeroImage(await fileToDataUrl(file));
-      return { ok: true };
-    } catch {
-      return { ok: false, error: "Could not read that file." };
-    }
-  };
-
-  const addVehicle = async (vehicleData) => {
-    if (api.live() && adminToken) {
-      try {
-        const created = await api.createVehicle(adminToken, vehicleData);
-        setVehicles((prev) => [...prev, created]);
-        return { ok: true };
-      } catch (err) {
-        return { ok: false, error: err.message || "Could not add vehicle." };
-      }
-    }
-    const id = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    setVehicles((prev) => [...prev, { ...vehicleData, id, images: [] }]);
-    return { ok: true };
-  };
-
-  const identifyPhoto = async (file) => {
-    if (!api.live() || !adminToken) {
-      return { ok: false, error: "Photo identification needs a live, logged-in backend connection." };
-    }
-    try {
-      const data = await api.identifyPhoto(adminToken, file);
-      return { ok: true, data };
-    } catch (err) {
-      return { ok: false, error: err.message || "Could not identify that photo." };
-    }
-  };
-
-  const selectedVehicle = vehicles.find((v) => v.id === selectedId);
-
-  return (
-    <div style={{ fontFamily: "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif" }} className="min-h-screen bg-white text-slate-800">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-        @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-        .delay-0{transition-delay:0ms}.delay-1{transition-delay:80ms}.delay-2{transition-delay:160ms}.delay-3{transition-delay:240ms}
-      `}</style>
-
-      <Header view={view} setView={setView} currency={currency} setCurrency={setCurrency} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} scrolled={scrolled} />
-
-      <main className="pb-14 md:pb-0">
-        {view === "home" && (
-          <>
-            <Hero setView={setView} heroImage={heroImage} />
-            <SearchPanel setView={setView} quickSearch={quickSearch} setQuickSearch={setQuickSearch} />
-            <TrustSection />
-            <FeaturedInventory vehicles={vehicles} favorites={favorites} toggleFav={toggleFav} onView={openDetails} currency={currency} setView={setView} />
-            <NewArrivalsSignup />
-            <BodyTypeStrip setView={setView} setInventoryFilter={setInventoryFilter} />
-            <HowItWorks />
-            <FinancingCTA setView={setView} />
-            <ReviewsSection />
-            <AboutPreview setView={setView} />
-            <ContactCTA setView={setView} />
-          </>
-        )}
-
-        {view === "inventory" && (
-          <InventoryPage vehicles={vehicles} favorites={favorites} toggleFav={toggleFav} onView={openDetails} currency={currency} filter={inventoryFilter} setFilter={setInventoryFilter} />
-        )}
-
-        {view === "details" && (
-          <VehicleDetailsPage vehicle={selectedVehicle} currency={currency} onTestDrive={openTestDrive} setView={setView} onBack={() => setView(previousView)} />
-        )}
-
-        {view === "services" && <ServicesPage setView={setView} currency={currency} />}
-        {view === "about" && <AboutPage />}
-        {view === "contact" && <ContactPage />}
-        {view === "manage" && (
-          <ManageInventoryPage
-            vehicles={vehicles}
-            currency={currency}
-            onUpdatePrice={updatePrice}
-            onUpdateDetails={updateDetails}
-            onAddImage={addImage}
-            onAddVehicle={addVehicle}
-            onIdentifyPhoto={identifyPhoto}
-            onRemoveImage={removeImage}
-            heroImage={heroImage}
-            onSetHeroUrl={setHeroUrl}
-            onUploadHeroFile={uploadHeroFile}
-            live={api.live()}
-            loggedIn={Boolean(adminToken)}
-            onLogin={handleLogin}
-            loginError={loginError}
-            loginLoading={loginLoading}
-          />
-        )}
-        {view === "privacy" && <LegalPage title="Privacy Policy" />}
-        {view === "terms" && <LegalPage title="Terms of Use" />}
-      </main>
-
-      <Footer setView={setView} />
-      <MobileBar setView={setView} onCall={() => window.location.assign("tel:+23409033504968")} />
-      <ChatWidget />
-      <TestDriveModal open={testDriveOpen} onClose={() => setTestDriveOpen(false)} vehicle={testDriveVehicle} />
-    </div>
-  );
-                               }
