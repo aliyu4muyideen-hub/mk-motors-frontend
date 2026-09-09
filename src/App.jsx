@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+Uimport React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Menu, X, Heart, Search, Phone, Mail, MapPin, Check, Star,
   ChevronDown, SlidersHorizontal, Fuel, Gauge, ShieldCheck,
@@ -1490,3 +1490,571 @@ function AddVehicleForm({ onAddVehicle, onIdentifyPhoto }) {
     }));
     setPhotoNote("Filled in from the photo — double check before saving, especially the year.");
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaveError("");
+    if (!form.year || !form.make || !form.model || !form.price || !form.mileage) {
+      setSaveError("Year, make, model, price, and mileage are required.");
+      return;
+    }
+    setSaving(true);
+    const result = await onAddVehicle({
+      year: Number(form.year), make: form.make, model: form.model, trim: form.trim, bodyType: form.bodyType,
+      price: Number(form.price), mileage: Number(form.mileage), engine: form.engine, transmission: form.transmission,
+      fuelType: form.fuelType, exteriorColor: form.exteriorColor, interiorColor: form.interiorColor, description: form.description,
+    });
+    setSaving(false);
+    if (result?.ok) { setForm(blank); setOpen(false); }
+    else setSaveError(result?.error || "Could not add this vehicle.");
+  };
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="w-full mb-8 border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-xl py-6 text-sm font-medium text-gray-600 hover:text-blue-700 transition-colors">
+        + Add a new vehicle
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-5 mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-gray-900">Add a new vehicle</h3>
+        <button type="button" onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
+      </div>
+
+      <div className="bg-blue-50 rounded-lg p-3 mb-4">
+        <p className="text-xs font-medium text-gray-700 mb-2">Have the VIN? Paste it here to auto-fill year, make, model, and more.</p>
+        <div className="flex gap-2">
+          <input value={form.vin} onChange={set("vin")} placeholder="17-character VIN"
+            className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <button type="button" onClick={lookupVin} disabled={vinLoading}
+            className="text-sm font-medium bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white rounded-lg px-4 py-2 transition-colors whitespace-nowrap">
+            {vinLoading ? "Looking up…" : "Auto-fill"}
+          </button>
+        </div>
+        {vinError && <p className="text-xs text-amber-600 mt-1.5">{vinError}</p>}
+      </div>
+
+      <div className="bg-purple-50 rounded-lg p-3 mb-4">
+        <p className="text-xs font-medium text-gray-700 mb-2">Or take/upload a photo of the car and let AI guess the year, make, model, and color.</p>
+        <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoFile} className="hidden" />
+        <button type="button" onClick={() => photoInputRef.current && photoInputRef.current.click()} disabled={photoLoading}
+          className="text-sm font-medium bg-purple-700 hover:bg-purple-800 disabled:opacity-60 text-white rounded-lg px-4 py-2 transition-colors">
+          {photoLoading ? "Identifying…" : "Identify from photo"}
+        </button>
+        {photoError && <p className="text-xs text-red-600 mt-1.5">{photoError}</p>}
+        {photoNote && !photoError && <p className="text-xs text-purple-700 mt-1.5">{photoNote}</p>}
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+        <Field label="Year" type="number" required value={form.year} onChange={set("year")} />
+        <Field label="Make" required value={form.make} onChange={set("make")} />
+        <Field label="Model" required value={form.model} onChange={set("model")} />
+        <Field label="Trim" value={form.trim} onChange={set("trim")} />
+        <label className="block text-sm">
+          <span className="block text-gray-600 mb-1">Body type</span>
+          <select value={form.bodyType} onChange={set("bodyType")} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>Sedan</option><option>SUV</option><option>Truck</option><option>Hatchback</option><option>Van</option>
+          </select>
+        </label>
+        <Field label="Price (USD)" type="number" required value={form.price} onChange={set("price")} />
+        <Field label="Mileage" type="number" required value={form.mileage} onChange={set("mileage")} />
+        <Field label="Engine" value={form.engine} onChange={set("engine")} placeholder="e.g. 2.5L 4-Cyl" />
+        <label className="block text-sm">
+          <span className="block text-gray-600 mb-1">Transmission</span>
+          <select value={form.transmission} onChange={set("transmission")} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>Automatic</option><option>Manual</option>
+          </select>
+        </label>
+        <label className="block text-sm">
+          <span className="block text-gray-600 mb-1">Fuel type</span>
+          <select value={form.fuelType} onChange={set("fuelType")} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>Gasoline</option><option>Diesel</option><option>Hybrid</option><option>Electric</option>
+          </select>
+        </label>
+        <Field label="Exterior color" value={form.exteriorColor} onChange={set("exteriorColor")} />
+        <Field label="Interior color" value={form.interiorColor} onChange={set("interiorColor")} />
+      </div>
+      <label className="block text-sm mb-4">
+        <span className="block text-gray-600 mb-1">Description</span>
+        <textarea rows={2} value={form.description} onChange={set("description")}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </label>
+
+      {saveError && <p className="text-sm text-red-600 mb-3">{saveError}</p>}
+      <button type="submit" disabled={saving} className="bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-medium rounded-lg px-5 py-2.5 text-sm transition-colors">
+        {saving ? "Adding…" : "Add vehicle"}
+      </button>
+      <p className="text-xs text-gray-400 mt-3">Add photos for it afterward from the list below, once it's saved.</p>
+    </form>
+  );
+}
+
+/* ---------- messages / leads inbox ---------- */
+const LEAD_LABELS = {
+  chat: { label: "Chat message", color: "bg-blue-100 text-blue-700" },
+  test_drive: { label: "Test drive request", color: "bg-green-100 text-green-700" },
+  trade_in: { label: "Trade-in request", color: "bg-amber-100 text-amber-700" },
+  contact: { label: "Contact form", color: "bg-purple-100 text-purple-700" },
+};
+
+function LeadCard({ lead, adminToken, onReplied }) {
+  const meta = LEAD_LABELS[lead.type] || { label: lead.type, color: "bg-gray-100 text-gray-700" };
+  const p = lead.payload;
+  const when = new Date(lead.createdAt + "Z").toLocaleString();
+  const customerEmail = p.email || (lead.type === "trade_in" && p.contact?.includes("@") ? p.contact : null);
+
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [replyError, setReplyError] = useState("");
+  const replies = Array.isArray(p.replies) ? p.replies : [];
+
+  const sendReply = async () => {
+    if (!replyText.trim()) return;
+    setSending(true);
+    setReplyError("");
+    try {
+      await api.replyToLead(adminToken, lead.id, replyText.trim());
+      setReplyText("");
+      setReplyOpen(false);
+      onReplied();
+    } catch (err) {
+      setReplyError(err.message || "Could not send reply.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="flex items-center justify-between mb-3">
+        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${meta.color}`}>{meta.label}</span>
+        <span className="text-xs text-gray-400">{when}</span>
+      </div>
+
+      {lead.type === "chat" && (
+        <>
+          <p className="font-medium text-gray-900">{p.name}</p>
+          {p.email && <p className="text-sm text-gray-500 mb-2">{p.email}</p>}
+          <p className="text-sm text-gray-700 mt-1">{p.message}</p>
+        </>
+      )}
+
+      {lead.type === "contact" && (
+        <>
+          <p className="font-medium text-gray-900">{p.name}</p>
+          <p className="text-sm text-gray-500 mb-2">{p.email}{p.phone ? ` · ${p.phone}` : ""}</p>
+          <p className="text-sm text-gray-700 mt-1">{p.message}</p>
+        </>
+      )}
+
+      {lead.type === "test_drive" && (
+        <>
+          <p className="font-medium text-gray-900">{p.name}</p>
+          <p className="text-sm text-gray-500 mb-2">{p.email} · {p.phone}</p>
+          <p className="text-sm text-gray-700">Wants to test drive on <span className="font-medium">{p.date} at {p.time}</span></p>
+          {p.vehicleId && <p className="text-xs text-gray-400 mt-1">Vehicle ID: {p.vehicleId}</p>}
+          {p.message && <p className="text-sm text-gray-600 mt-2 italic">"{p.message}"</p>}
+        </>
+      )}
+
+      {lead.type === "trade_in" && (
+        <>
+          <p className="font-medium text-gray-900">{p.name}</p>
+          <p className="text-sm text-gray-500 mb-2">{p.contact}</p>
+          <p className="text-sm text-gray-700">{p.year} {p.make} {p.model} — {p.mileage ? `${Number(p.mileage).toLocaleString()} mi, ` : ""}{p.condition || "condition not given"}</p>
+        </>
+      )}
+
+      {replies.length > 0 && (
+        <div className="mt-3 pl-3 border-l-2 border-blue-100 space-y-2">
+          {replies.map((r, i) => (
+            <div key={i}>
+              <p className="text-xs text-gray-400">You replied · {new Date(r.sentAt).toLocaleString()}</p>
+              <p className="text-sm text-gray-700">{r.message}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 pt-3 border-t border-gray-100">
+        {!customerEmail ? (
+          <p className="text-xs text-gray-400 italic">No email address on this message — can't reply directly.</p>
+        ) : replyOpen ? (
+          <div className="space-y-2">
+            <textarea
+              rows={2} value={replyText} onChange={(e) => setReplyText(e.target.value)}
+              placeholder={`Reply to ${customerEmail}`}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {replyError && <p className="text-xs text-red-600">{replyError}</p>}
+            <div className="flex gap-2">
+              <button onClick={sendReply} disabled={sending}
+                className="text-sm font-medium bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white rounded-lg px-4 py-1.5 transition-colors">
+                {sending ? "Sending…" : "Send reply"}
+              </button>
+              <button onClick={() => { setReplyOpen(false); setReplyError(""); }} className="text-sm text-gray-500 hover:text-gray-700">
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setReplyOpen(true)} className="text-sm font-medium text-blue-700 hover:text-blue-800">
+            Reply
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MessagesPage({ live, loggedIn, onLogin, loginError, loginLoading, adminToken }) {
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [filter, setFilter] = useState("");
+
+  const refresh = () => {
+    if (!live || !loggedIn || !adminToken) return;
+    setLoading(true);
+    setError("");
+    api.getLeads(adminToken)
+      .then(setLeads)
+      .catch((err) => setError(err.message || "Could not load messages."))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(refresh, [live, loggedIn, adminToken]);
+
+  if (live && !loggedIn) {
+    return <AdminLoginGate onLogin={onLogin} error={loginError} loading={loginLoading} />;
+  }
+
+  if (!live) {
+    return (
+      <div className="pt-28 pb-20 max-w-2xl mx-auto px-5 text-center text-gray-500 text-sm">
+        Messages only show up once connected to a live backend (demo mode has nowhere to save them).
+      </div>
+    );
+  }
+
+  const filtered = filter ? leads.filter((l) => l.type === filter) : leads;
+
+  return (
+    <div className="pt-28 pb-20 max-w-3xl mx-auto px-5">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <h1 className="text-3xl font-bold text-slate-900">Messages</h1>
+        <select value={filter} onChange={(e) => setFilter(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">All types</option>
+          <option value="chat">Chat</option>
+          <option value="test_drive">Test drive</option>
+          <option value="trade_in">Trade-in</option>
+          <option value="contact">Contact form</option>
+        </select>
+      </div>
+
+      {loading && <p className="text-sm text-gray-400">Loading…</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      {!loading && !error && filtered.length === 0 && (
+        <p className="text-sm text-gray-400">No messages yet.</p>
+      )}
+
+      <div className="space-y-3">
+        {filtered.map((lead) => <LeadCard key={lead.id} lead={lead} adminToken={adminToken} onReplied={refresh} />)}
+      </div>
+    </div>
+  );
+}
+
+function ManageInventoryPage({ vehicles, currency, onUpdatePrice, onUpdateDetails, onAddImage, onRemoveImage, onAddVehicle, onIdentifyPhoto, heroImage, onSetHeroUrl, onUploadHeroFile, live, loggedIn, onLogin, loginError, loginLoading }) {
+  if (live && !loggedIn) {
+    return <AdminLoginGate onLogin={onLogin} error={loginError} loading={loginLoading} />;
+  }
+
+  return (
+    <div className="pt-28 pb-20 max-w-4xl mx-auto px-5">
+      <h1 className="text-3xl font-bold text-slate-900 mb-2">Manage inventory</h1>
+      <p className="text-gray-500 mb-2">Update the hero photo, car prices, and car photos — changes appear across the site instantly.</p>
+      {live ? (
+        <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 inline-block mb-8">
+          Connected to your live backend — every change here is saved permanently.
+        </p>
+      ) : (
+        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 inline-block mb-8">
+          Running in demo mode (no backend connected) — edits reset if the page reloads. Set API_BASE near the top of the file to your deployed backend URL to make this permanent.
+        </p>
+      )}
+
+      <HeroImageManager heroImage={heroImage} onSetUrl={onSetHeroUrl} onUploadFile={onUploadHeroFile} />
+
+      <AddVehicleForm onAddVehicle={onAddVehicle} onIdentifyPhoto={onIdentifyPhoto} />
+
+      <div className="space-y-4">
+        {vehicles.map((v) => (
+          <ManageRow key={v.id} vehicle={v} currency={currency} onUpdatePrice={onUpdatePrice} onUpdateDetails={onUpdateDetails} onAddImage={onAddImage} onRemoveImage={onRemoveImage} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- app ---------- */
+export default function App() {
+  const [view, setViewRaw] = useState("home");
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [currency, setCurrency] = useState("USD");
+  const [favorites, setFavorites] = useState(new Set());
+  const [selectedId, setSelectedId] = useState(null);
+  const [previousView, setPreviousView] = useState("home");
+  const [testDriveVehicle, setTestDriveVehicle] = useState(null);
+  const [testDriveOpen, setTestDriveOpen] = useState(false);
+  const [quickSearch, setQuickSearch] = useState({ make: "", bodyType: "", year: "", maxPrice: "", transmission: "" });
+  const [inventoryFilter, setInventoryFilter] = useState({ make: "", bodyType: "", transmission: "", maxPrice: "", minYear: "" });
+  const [vehicles, setVehicles] = useState(VEHICLES);
+  const [heroImage, setHeroImage] = useState("");
+  const [adminToken, setAdminToken] = useState(null);
+  const [loginError, setLoginError] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  const setView = (v) => { setViewRaw(v); window.scrollTo({ top: 0, behavior: "auto" }); };
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // load real data from the backend if API_BASE is set; otherwise keep the built-in sample data
+  useEffect(() => {
+    if (!api.live()) return;
+    api.vehicles().then(setVehicles).catch(() => {});
+    api.settings().then((s) => setHeroImage(s.heroImage || "")).catch(() => {});
+  }, []);
+
+  // sync quick search into inventory filter when navigating from home
+  useEffect(() => {
+    if (view === "inventory") {
+      setInventoryFilter((f) => ({
+        ...f,
+        make: quickSearch.make || f.make,
+        bodyType: quickSearch.bodyType || f.bodyType,
+        maxPrice: quickSearch.maxPrice || f.maxPrice,
+        transmission: quickSearch.transmission || f.transmission,
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
+
+  const toggleFav = (id) => {
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const openDetails = (id) => {
+    setPreviousView(view === "details" ? previousView : view);
+    setSelectedId(id);
+    setView("details");
+  };
+  const openTestDrive = (vehicle) => { setTestDriveVehicle(vehicle || null); setTestDriveOpen(true); };
+
+  const handleLogin = async (password) => {
+    setLoginLoading(true);
+    setLoginError("");
+    try {
+      const { token } = await api.login(password);
+      setAdminToken(token);
+    } catch (err) {
+      setLoginError(err.message || "Login failed.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const updatePrice = async (id, price) => {
+    setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, price } : v))); // optimistic
+    if (api.live() && adminToken) {
+      try { await api.updateVehicle(adminToken, id, { price }); }
+      catch { /* keep the optimistic value; user can retry Save */ }
+    }
+  };
+
+  const updateDetails = async (id, fields) => {
+    setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, ...fields } : v))); // optimistic
+    if (api.live() && adminToken) {
+      try { await api.updateVehicle(adminToken, id, fields); }
+      catch { /* keep the optimistic value; user can retry Save */ }
+    }
+  };
+
+  const addImage = async (id, urlOrFile) => {
+    const isFile = urlOrFile instanceof File;
+    if (!isFile && (!urlOrFile || !urlOrFile.trim())) return { ok: false, error: "Nothing to add." };
+
+    if (api.live() && adminToken) {
+      try {
+        const result = isFile
+          ? await api.uploadVehicleImage(adminToken, id, urlOrFile)
+          : await api.addVehicleImageUrl(adminToken, id, urlOrFile.trim());
+        setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, images: [...v.images, { url: result.url }] } : v)));
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err.message || "Upload failed." };
+      }
+    }
+    // demo mode: local-only, works for both data-URL uploads and pasted links
+    try {
+      const value = isFile ? await fileToDataUrl(urlOrFile) : urlOrFile.trim();
+      setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, images: [...v.images, value] } : v)));
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: "Could not read that file." };
+    }
+  };
+
+  const removeImage = async (id, index, imageId) => {
+    setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, images: v.images.filter((_, i) => i !== index) } : v))); // optimistic
+    if (api.live() && adminToken && imageId) {
+      try { await api.removeVehicleImage(adminToken, id, index, imageId); }
+      catch { /* photo stays removed locally even if the request failed */ }
+    }
+  };
+
+  const setHeroUrl = async (url) => {
+    if (!url || !url.trim()) return { ok: false, error: "Nothing to add." };
+    if (api.live() && adminToken) {
+      try { const r = await api.setSettingUrl(adminToken, "heroImage", url.trim()); setHeroImage(r.value); return { ok: true }; }
+      catch (err) { return { ok: false, error: err.message || "Could not save." }; }
+    }
+    setHeroImage(url.trim());
+    return { ok: true };
+  };
+
+  const uploadHeroFile = async (file) => {
+    if (api.live() && adminToken) {
+      try { const r = await api.uploadSettingImage(adminToken, "heroImage", file); setHeroImage(r.value); return { ok: true }; }
+      catch (err) { return { ok: false, error: err.message || "Upload failed." }; }
+    }
+    try {
+      setHeroImage(await fileToDataUrl(file));
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "Could not read that file." };
+    }
+  };
+
+  const addVehicle = async (vehicleData) => {
+    if (api.live() && adminToken) {
+      try {
+        const created = await api.createVehicle(adminToken, vehicleData);
+        setVehicles((prev) => [...prev, created]);
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err.message || "Could not add vehicle." };
+      }
+    }
+    const id = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setVehicles((prev) => [...prev, { ...vehicleData, id, images: [] }]);
+    return { ok: true };
+  };
+
+  const identifyPhoto = async (file) => {
+    if (!api.live() || !adminToken) {
+      return { ok: false, error: "Photo identification needs a live, logged-in backend connection." };
+    }
+    try {
+      const data = await api.identifyPhoto(adminToken, file);
+      return { ok: true, data };
+    } catch (err) {
+      return { ok: false, error: err.message || "Could not identify that photo." };
+    }
+  };
+
+  const selectedVehicle = vehicles.find((v) => v.id === selectedId);
+
+  return (
+    <div style={{ fontFamily: "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif" }} className="min-h-screen bg-white text-slate-800">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        .delay-0{transition-delay:0ms}.delay-1{transition-delay:80ms}.delay-2{transition-delay:160ms}.delay-3{transition-delay:240ms}
+      `}</style>
+
+      <Header view={view} setView={setView} currency={currency} setCurrency={setCurrency} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} scrolled={scrolled} />
+
+      <main className="pb-14 md:pb-0">
+        {view === "home" && (
+          <>
+            <Hero setView={setView} heroImage={heroImage} />
+            <SearchPanel setView={setView} quickSearch={quickSearch} setQuickSearch={setQuickSearch} />
+            <TrustSection />
+            <FeaturedInventory vehicles={vehicles} favorites={favorites} toggleFav={toggleFav} onView={openDetails} currency={currency} setView={setView} />
+            <NewArrivalsSignup />
+            <BodyTypeStrip setView={setView} setInventoryFilter={setInventoryFilter} />
+            <HowItWorks />
+            <FinancingCTA setView={setView} />
+            <ReviewsSection />
+            <AboutPreview setView={setView} />
+            <ContactCTA setView={setView} />
+          </>
+        )}
+
+        {view === "inventory" && (
+          <InventoryPage vehicles={vehicles} favorites={favorites} toggleFav={toggleFav} onView={openDetails} currency={currency} filter={inventoryFilter} setFilter={setInventoryFilter} />
+        )}
+
+        {view === "details" && (
+          <VehicleDetailsPage vehicle={selectedVehicle} currency={currency} onTestDrive={openTestDrive} setView={setView} onBack={() => setView(previousView)} />
+        )}
+
+        {view === "services" && <ServicesPage setView={setView} currency={currency} />}
+        {view === "about" && <AboutPage />}
+        {view === "contact" && <ContactPage />}
+        {view === "messages" && (
+          <MessagesPage
+            live={api.live()}
+            loggedIn={Boolean(adminToken)}
+            onLogin={handleLogin}
+            loginError={loginError}
+            loginLoading={loginLoading}
+            adminToken={adminToken}
+          />
+        )}
+        {view === "manage" && (
+          <ManageInventoryPage
+            vehicles={vehicles}
+            currency={currency}
+            onUpdatePrice={updatePrice}
+            onUpdateDetails={updateDetails}
+            onAddImage={addImage}
+            onAddVehicle={addVehicle}
+            onIdentifyPhoto={identifyPhoto}
+            onRemoveImage={removeImage}
+            heroImage={heroImage}
+            onSetHeroUrl={setHeroUrl}
+            onUploadHeroFile={uploadHeroFile}
+            live={api.live()}
+            loggedIn={Boolean(adminToken)}
+            onLogin={handleLogin}
+            loginError={loginError}
+            loginLoading={loginLoading}
+          />
+        )}
+        {view === "privacy" && <LegalPage title="Privacy Policy" />}
+        {view === "terms" && <LegalPage title="Terms of Use" />}
+      </main>
+
+      <Footer setView={setView} />
+      <MobileBar setView={setView} onCall={() => window.location.assign("tel:+2349033504968")} />
+      <ChatWidget />
+      <TestDriveModal open={testDriveOpen} onClose={() => setTestDriveOpen(false)} vehicle={testDriveVehicle} />
+    </div>
+  );
+    }
