@@ -352,7 +352,199 @@ function Field({ label, type = "text", ...props }) {
     </label>
   );
       }
+/* ---------- nav ---------- */
+function Header({ view, setView, currency, setCurrency, mobileOpen, setMobileOpen, scrolled }) {
+  const links = [
+    { id: "home", label: "Home" },
+    { id: "inventory", label: "Inventory" },
+    { id: "services", label: "Services" },
+    { id: "about", label: "About Us" },
+    { id: "contact", label: "Contact" },
+  ];
+  return (
+    <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/90 backdrop-blur-md shadow-sm" : "bg-white"} border-b border-gray-100`}>
+      <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
+        <button onClick={() => setView("home")} className="flex items-center gap-2 font-bold text-lg text-slate-900">
+          <span className="w-8 h-8 rounded-lg bg-blue-700 text-white flex items-center justify-center text-sm">MK</span>
+          MK MOTORS
+        </button>
 
+        <nav className="hidden md:flex items-center gap-7">
+          {links.map((l) => (
+            <button
+              key={l.id}
+              onClick={() => setView(l.id)}
+              className={`text-sm font-medium transition-colors relative pb-1 ${view === l.id ? "text-blue-700" : "text-gray-600 hover:text-gray-900"}`}
+            >
+              {l.label}
+              {view === l.id && <span className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-blue-700 rounded-full" />}
+            </button>
+          ))}
+        </nav>
+
+        <div className="hidden md:flex items-center gap-3">
+          <button
+            onClick={() => setView("messages")}
+            className="text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors"
+            title="View chat, test drive, and trade-in messages"
+          >
+            Messages
+          </button>
+          <button
+            onClick={() => setView("manage")}
+            className="text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors"
+            title="Edit prices and photos"
+          >
+            Manage Inventory
+          </button>
+          <button
+            onClick={() => setCurrency(currency === "USD" ? "NGN" : "USD")}
+            className="text-xs font-medium border border-gray-200 rounded-full px-3 py-1.5 text-gray-600 hover:border-gray-300 transition-colors"
+          >
+            {currency === "USD" ? "$ USD" : "₦ NGN"}
+          </button>
+          <button onClick={() => setView("inventory")} className="bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            Find a Car
+          </button>
+        </div>
+
+        <button className="md:hidden text-gray-700" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Menu">
+          {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+
+      <div className={`md:hidden overflow-hidden transition-all duration-300 ${mobileOpen ? "max-h-96" : "max-h-0"}`}>
+        <div className="px-5 pb-4 flex flex-col gap-1 border-t border-gray-100 pt-3">
+          {links.map((l) => (
+            <button key={l.id} onClick={() => { setView(l.id); setMobileOpen(false); }}
+              className={`text-left py-2.5 text-sm font-medium ${view === l.id ? "text-blue-700" : "text-gray-700"}`}>
+              {l.label}
+            </button>
+          ))}
+          <button onClick={() => { setView("messages"); setMobileOpen(false); }}
+            className="text-left py-2.5 text-sm font-medium text-gray-500">
+            Messages
+          </button>
+          <button onClick={() => { setView("manage"); setMobileOpen(false); }}
+            className="text-left py-2.5 text-sm font-medium text-gray-500">
+            Manage Inventory
+          </button>
+          <button onClick={() => { setView("inventory"); setMobileOpen(false); }} className="mt-2 bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg">
+            Find a Car
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ---------- home sections ---------- */
+function Hero({ setView, heroImage }) {
+  return (
+    <section className="pt-32 pb-16 bg-gradient-to-b from-gray-50 to-white">
+      <div className="max-w-6xl mx-auto px-5 grid md:grid-cols-2 gap-10 items-center">
+        <div className="animate-[fadeUp_0.6s_ease]">
+          <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 leading-tight mb-4">Find your next car.</h1>
+          <p className="text-gray-600 text-lg mb-6 max-w-md">Quality vehicles, transparent prices, and a dealership you can trust.</p>
+          <div className="flex flex-wrap gap-3 mb-6">
+            <button onClick={() => setView("inventory")} className="bg-blue-700 hover:bg-blue-800 text-white font-medium px-6 py-3 rounded-lg transition-colors">
+              Browse Inventory
+            </button>
+            <button onClick={() => setView("contact")} className="border border-gray-300 hover:border-gray-400 text-gray-800 font-medium px-6 py-3 rounded-lg transition-colors">
+              Contact Us
+            </button>
+          </div>
+          <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600">
+            <li className="flex items-center gap-1.5"><Check size={15} className="text-blue-700" /> Quality Checked</li>
+            <li className="flex items-center gap-1.5"><Check size={15} className="text-blue-700" /> Transparent Pricing</li>
+            <li className="flex items-center gap-1.5"><Check size={15} className="text-blue-700" /> Flexible Financing</li>
+          </ul>
+        </div>
+        <div className="animate-[fadeUp_0.7s_ease] rounded-2xl border border-gray-200 shadow-sm overflow-hidden aspect-square sm:aspect-video">
+          {heroImage ? (
+            <img src={resolveUrl(heroImage)} alt="Featured vehicle" className="w-full h-full object-cover object-center" />
+          ) : (
+            <div className="w-full h-full bg-white flex items-center justify-center p-10">
+              <CarArt bodyType="SUV" className="w-full h-full" />
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SearchPanel({ setView, quickSearch, setQuickSearch }) {
+  return (
+    <section className="max-w-5xl mx-auto px-5 -mt-8 relative z-10">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-md p-6">
+        <h2 className="font-semibold text-gray-900 mb-4">Find the right car for you</h2>
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+          <select className="col-span-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={quickSearch.make} onChange={(e) => setQuickSearch((q) => ({ ...q, make: e.target.value }))}>
+            <option value="">Make</option>
+            {[...new Set(VEHICLES.map((v) => v.make))].map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <select className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={quickSearch.bodyType} onChange={(e) => setQuickSearch((q) => ({ ...q, bodyType: e.target.value }))}>
+            <option value="">Body Type</option>
+            {[...new Set(VEHICLES.map((v) => v.bodyType))].map((b) => <option key={b} value={b}>{b}</option>)}
+          </select>
+          <select className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={quickSearch.year} onChange={(e) => setQuickSearch((q) => ({ ...q, year: e.target.value }))}>
+            <option value="">Year</option>
+            {[...new Set(VEHICLES.map((v) => v.year))].sort((a, b) => b - a).map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={quickSearch.maxPrice} onChange={(e) => setQuickSearch((q) => ({ ...q, maxPrice: e.target.value }))}>
+            <option value="">Max price</option>
+            <option value="20000">Under $20,000</option>
+            <option value="25000">Under $25,000</option>
+            <option value="30000">Under $30,000</option>
+          </select>
+          <select className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={quickSearch.transmission} onChange={(e) => setQuickSearch((q) => ({ ...q, transmission: e.target.value }))}>
+            <option value="">Transmission</option>
+            <option value="Automatic">Automatic</option>
+            <option value="Manual">Manual</option>
+          </select>
+          <button onClick={() => setView("inventory")} className="bg-blue-700 hover:bg-blue-800 text-white font-medium rounded-lg py-2.5 text-sm transition-colors flex items-center justify-center gap-1.5">
+            <Search size={15} /> Search Cars
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TrustSection() {
+  const items = [
+    { icon: ShieldCheck, title: "Quality Checked", text: "Every vehicle is inspected before being listed." },
+    { icon: Check, title: "Transparent Pricing", text: "No confusing pricing or unnecessary surprises." },
+    { icon: Car, title: "Flexible Financing", text: "Simple financing options for different budgets." },
+    { icon: Users, title: "Customer First", text: "We're here to help you find the right vehicle." },
+  ];
+  return (
+    <section className="py-20 bg-gray-50">
+      <div className="max-w-6xl mx-auto px-5">
+        <Reveal><h2 className="text-2xl sm:text-3xl font-bold text-slate-900 text-center mb-12">Why choose MK Motors?</h2></Reveal>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {items.map((it, i) => (
+            <Reveal key={it.title} className={`delay-${i}`}>
+              <div className="bg-white rounded-xl border border-gray-200 p-6 h-full">
+                <div className="w-11 h-11 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center mb-4">
+                  <it.icon size={20} />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1.5">{it.title}</h3>
+                <p className="text-sm text-gray-500">{it.text}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+                     }
 function FeaturedInventory({ vehicles, favorites, toggleFav, onView, currency, setView }) {
   return (
     <section className="py-20">
